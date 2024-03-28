@@ -1,0 +1,321 @@
+<?xml version="1.0"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+         xmlns:s="library://ns.adobe.com/flex/spark"
+         xmlns:icons="eu.claudius.iacob.testing.ui.icons.*"
+         creationComplete="_onCreationComplete(event)">
+
+    <fx:Script>
+        <![CDATA[
+        import eu.claudius.iacob.testing.common.StatesRegistry;
+        import eu.claudius.iacob.testing.common.TestingUtils;
+        import eu.claudius.iacob.testing.interfaces.ITestCase;
+
+        import mx.core.IDataRenderer;
+        import mx.core.IVisualElement;
+        import mx.events.FlexEvent;
+        import mx.utils.ObjectProxy;
+
+        private var _detailsRenderer:IVisualElement;
+        private var _detailsRendererChanged:Boolean;
+        private var _details:ObjectProxy;
+
+        [Bindable]
+        private var _defaultColor:uint;
+
+        [Bindable]
+        private var _haveData:Boolean
+
+        [Bindable]
+        private var _intrinsicLabel:String;
+
+        [Bindable]
+        private var _testSuiteIconVisible:Boolean;
+
+        [Bindable]
+        private var _testIconVisible:Boolean;
+
+        [Bindable]
+        private var _testCaseIconVisible:Boolean;
+
+        [Bindable]
+        private var _errorInfoVisible:Boolean;
+
+        [Bindable]
+        private var _errorText:String;
+
+        [Bindable]
+        private var _errorCode:int;
+
+        [Bindable]
+        private var _errorStackTrace:String;
+
+        [Bindable]
+        private var _title:String;
+
+        [Bindable]
+        private var _subtitle:String;
+
+        [Bindable]
+        private var _state:String;
+
+        [Bindable]
+        private var _stateVisible:Boolean;
+
+        [Bindable]
+        private var _intrinsicColor:uint;
+
+        [Bindable]
+        private var _stateColor:uint;
+
+        [Bindable]
+        private var _time:String;
+
+        [Bindable]
+        private var _duration:String;
+
+        public function set source(value:ListItemWrapper):void {
+            _haveData = !!value;
+            if (_haveData) {
+                _title = value.title;
+                _subtitle = value.subtitle;
+                _details = new ObjectProxy(value.details);
+                var existingRenderer:IVisualElement = detailsContainer.getElementAt(0);
+                if (existingRenderer && (existingRenderer is IDataRenderer)) {
+                    (existingRenderer as IDataRenderer).data = _details;
+                }
+                _intrinsicColor = value.intrinsicColor;
+                _intrinsicLabel = value.intrinsicLabel;
+                _testSuiteIconVisible = (_intrinsicLabel == ListItemWrapper.TEST_SUITE_LABEL);
+                _testIconVisible = (_intrinsicLabel == ListItemWrapper.TEST_LABEL);
+                _testCaseIconVisible = (_intrinsicLabel == ListItemWrapper.TEST_CASE_LABEL);
+                var error:Error = value.error;
+                _errorInfoVisible = !!error;
+                _errorText = error ? error.message : '';
+                _errorCode = error ? error.errorID : 0;
+                _errorStackTrace = error ? _formatStackTrace(error.getStackTrace(), _errorText) : '';
+                var time:Date;
+                _time = (time = value.time) ? time.toLocaleTimeString() : '';
+                var duration:Number;
+                _duration = (!isNaN(duration = value.duration)) ? '' + duration + ' ms' +
+                        TestingUtils.formatMilliseconds(value.duration) : '';
+                _stateVisible = (value.runnable is ITestCase);
+                if (_stateVisible) {
+                    var stateCode:int = value.state;
+                    _state = TestingUtils.getStateName(stateCode);
+                    _stateColor = (stateCode == StatesRegistry.STATE_ERROR) ? value.UP_ERROR_BG :
+                            (stateCode == StatesRegistry.STATE_FAIL) ? value.UP_FAILED_BG :
+                                    (stateCode == StatesRegistry.STATE_PASS) ? value.UP_PASSED_BG :
+                                            value.SELECTED_DEFAULT_BG;
+                }
+
+
+            }
+        }
+
+        public function set detailsRenderer(value:IVisualElement):void {
+            _detailsRenderer = value;
+            _detailsRendererChanged = true;
+            invalidateProperties();
+            invalidateSize();
+            invalidateDisplayList();
+            invalidateParentSizeAndDisplayList();
+        }
+
+        public function get detailsRenderer():IVisualElement {
+            return _detailsRenderer;
+        }
+
+        override protected function commitProperties():void {
+            super.commitProperties();
+            if (_detailsRendererChanged) {
+                var existingRenderer:IVisualElement = detailsContainer.getElementAt(0);
+                if (existingRenderer && existingRenderer !== _detailsRenderer) {
+                    if (existingRenderer is IDataRenderer) {
+                        (existingRenderer as IDataRenderer).data = null;
+                    }
+                }
+            }
+        }
+
+        override protected function createChildren():void {
+            super.createChildren();
+            if (_detailsRendererChanged) {
+                _detailsRendererChanged = false;
+                if (_detailsRenderer) {
+                    detailsContainer.addElement(_detailsRenderer);
+                    if (_detailsRenderer is IDataRenderer) {
+                        (_detailsRenderer as IDataRenderer).data = _details;
+                    }
+                }
+            }
+        }
+
+        private function _onCreationComplete(event:FlexEvent):void {
+            _defaultColor = getStyle('borderColor');
+        }
+
+        private function _formatStackTrace(stackTrace:String, redundantText:String):String {
+            if (stackTrace) {
+                var index:int = stackTrace.indexOf(redundantText);
+                if (index != -1) {
+                    index += redundantText.length;
+                    stackTrace = _trimLeft(stackTrace.slice(index));
+                }
+                var lines:Array = stackTrace.split(/[\n\r]+/);
+                lines = lines.map(_trimLeft);
+                stackTrace = lines.join('\n\n');
+            }
+            return stackTrace;
+        }
+
+        private function _trimLeft(str:String, ...ignore):String {
+            if (str == null) {
+                return '';
+            }
+            return str.replace(/^[\s\n\r]+/, '');
+        }
+        ]]>
+    </fx:Script>
+
+    <!-- Border -->
+    <s:Rect id="border" top="0" left="0" bottom="0" width="100%">
+        <s:stroke>
+            <s:SolidColorStroke color="{_haveData? _intrinsicColor : _defaultColor}"
+                                weight="1"/>
+        </s:stroke>
+    </s:Rect>
+
+    <!-- Left colored bar; works as a quick hint to the runnable type; does not change
+        color based on state. -->
+    <s:Rect id="colouredBar" top="1" left="1" bottom="1" width="5" visible="{_haveData}">
+        <s:fill>
+            <s:SolidColor color="{_intrinsicColor}"/>
+        </s:fill>
+    </s:Rect>
+
+    <!-- Runnable specific icon. -->
+
+    <icons:TestSuiteIcon id="testSuiteIcon" x="14" y="10"
+                         visible="{_haveData &amp;&amp; _testSuiteIconVisible}"/>
+    <icons:TestIcon id="testIcon" x="22" y="10"
+                    visible="{_haveData &amp;&amp; _testIconVisible}"/>
+    <icons:TestCaseIcon id="testCaseIcon" x="22" y="10"
+                        visible="{_haveData &amp;&amp; _testCaseIconVisible}"/>
+
+    <!-- Placeholder, for the case where there is no selection. -->
+    <s:VGroup id="placeholder" verticalAlign="middle" horizontalAlign="center"
+              visible="{!_haveData}" width="100%" height="100%">
+        <icons:NoSelection id="noSelectionIcon"/>
+        <s:Label styleName="{CommonStyles.HEADER_STYLE}" text="No Selection"/>
+        <s:Label styleName="{CommonStyles.MAIN_STYLE}" lineBreak="toFit" width="75%" textAlign="center"
+                 text="This area will populate when a valid selection is made in the &quot;Test Queue&quot; panel."/>
+    </s:VGroup>
+
+    <!-- Information extracted from given `source` -->
+    <s:Scroller width="100%" height="100%" visible="{_haveData}">
+        <s:Group id="selectionInfo">
+            <s:layout>
+                <s:VerticalLayout padding="10" gap="5" horizontalAlign="justify"/>
+            </s:layout>
+
+            <!-- TYPE, e.g.: "TEST CASE"-->
+            <s:HGroup>
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Type:"/>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{_intrinsicLabel}"/>
+            </s:HGroup>
+
+            <!-- NAME -->
+            <s:HGroup>
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Name:"/>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{_title}"/>
+            </s:HGroup>
+
+            <!-- DESCRIPTION -->
+            <s:HGroup width="99%">
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Description:"/>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{_subtitle}"
+                         lineBreak="toFit" width="100%"/>
+            </s:HGroup>
+
+            <!-- STATE -->
+            <s:HGroup visible="{_stateVisible}" includeInLayout="{_stateVisible}">
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Current state:"/>
+                <s:Rect height="100%" width="5">
+                    <s:fill>
+                        <s:SolidColor color="{_stateColor}"/>
+                    </s:fill>
+                </s:Rect>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{ _state }"/>
+            </s:HGroup>
+
+            <!-- TIME -->
+            <s:HGroup visible="{_time}" includeInLayout="{_time}">
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Time run:"/>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{_time}"/>
+            </s:HGroup>
+
+            <!-- DURATION -->
+            <s:HGroup visible="{_duration}" includeInLayout="{_duration}">
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Duration:"/>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{_duration}"/>
+            </s:HGroup>
+
+            <!-- ERROR MESSAGE (if applicable) -->
+            <s:HGroup visible="{_errorInfoVisible}" includeInLayout="{_errorInfoVisible}">
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Error text:"/>
+                <s:Rect height="100%" width="5">
+                    <s:fill>
+                        <s:SolidColor color="{_stateColor}"/>
+                    </s:fill>
+                </s:Rect>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{ _errorText }"/>
+            </s:HGroup>
+
+            <!-- ERROR CODE (if applicable) -->
+            <s:HGroup visible="{_errorInfoVisible}" includeInLayout="{_errorInfoVisible}">
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Error code:"/>
+                <s:Rect height="100%" width="5">
+                    <s:fill>
+                        <s:SolidColor color="{_stateColor}"/>
+                    </s:fill>
+                </s:Rect>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{ _errorCode }"/>
+            </s:HGroup>
+
+            <!-- ERROR STACK TRACE (if applicable) -->
+            <s:HGroup visible="{_errorInfoVisible}" includeInLayout="{_errorInfoVisible}"
+                      width="99%">
+                <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
+                         styleName="{CommonStyles.HEADER_STYLE}" text="Stack trace:"/>
+                <s:Rect height="100%" width="5">
+                    <s:fill>
+                        <s:SolidColor color="{_stateColor}"/>
+                    </s:fill>
+                </s:Rect>
+                <s:Label styleName="{CommonStyles.MAIN_STYLE}" lineBreak="toFit" width="100%"
+                         text="{ _errorStackTrace }"/>
+            </s:HGroup>
+
+            <!-- Separator -->
+            <s:HGroup horizontalAlign="center" verticalAlign="middle" height="32">
+                <s:Line width="50%">
+                    <s:stroke>
+                        <s:SolidColorStroke color="{_defaultColor}" weight="1"/>
+                    </s:stroke>
+                </s:Line>
+            </s:HGroup>
+
+            <!-- Reserved space for custom rendering of ITestCase's `details` field, if applicable -->
+            <s:Group id="detailsContainer"></s:Group>
+        </s:Group>
+    </s:Scroller>
+
+</s:Group>

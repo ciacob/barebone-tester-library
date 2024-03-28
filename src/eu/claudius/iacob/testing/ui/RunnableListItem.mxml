@@ -1,0 +1,350 @@
+<?xml version="1.0"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
+                xmlns:s="library://ns.adobe.com/flex/spark"
+                xmlns:icons="eu.claudius.iacob.testing.ui.icons.*"
+                preinitialize="_onPreInitialize(event)"
+                initialize="_onInitialize (event)"
+                width="10"
+                height="52">
+
+    <s:states>
+        <s:State name="up_default"/>
+        <s:State name="up_passed"/>
+        <s:State name="up_failed"/>
+        <s:State name="up_error"/>
+        <s:State name="over_default"/>
+        <s:State name="over_passed"/>
+        <s:State name="over_failed"/>
+        <s:State name="over_error"/>
+        <s:State name="selected_default"/>
+        <s:State name="selected_passed"/>
+        <s:State name="selected_failed"/>
+        <s:State name="selected_error"/>
+    </s:states>
+
+    <fx:Script>
+        <![CDATA[
+        import eu.claudius.iacob.testing.common.StatesRegistry;
+
+        import mx.events.FlexEvent;
+        import mx.events.ResizeEvent;
+        import mx.utils.ObjectProxy;
+
+        private var _resizeTimer:Timer;
+
+        [Bindable]
+        private var itemWidth:Number;
+
+        /* We draw our own background */
+        override public function get autoDrawBackground():Boolean {
+            return false;
+        }
+
+        /* We use our own states. */
+        override protected function getCurrentRendererState():String {
+
+            // UP base state
+            if (!hovered && !selected) {
+                return (data.state == StatesRegistry.STATE_NOT_RUN) ?
+                        'up_default' :
+                        (data.state == StatesRegistry.STATE_PASS) ?
+                                'up_passed' :
+                                (data.state == StatesRegistry.STATE_FAIL) ?
+                                        'over_failed' :
+                                        (data.state == StatesRegistry.STATE_ERROR) ?
+                                                'up_error' : currentState;
+            }
+
+            // (H)OVER base state; we do not provide a "SELECTED_(H)OVER" state.
+            if (hovered && !selected) {
+                return (data.state == StatesRegistry.STATE_NOT_RUN) ?
+                        'over_default' :
+                        (data.state == StatesRegistry.STATE_PASS) ?
+                                'over_passed' :
+                                (data.state == StatesRegistry.STATE_FAIL) ?
+                                        'up_failed' :
+                                        (data.state == StatesRegistry.STATE_ERROR) ?
+                                                'over_error' : currentState;
+            }
+
+            // SELECTED base state; we do not provide a "SELECTED_(H)OVER" state.
+            if (selected) {
+                return (data.state == StatesRegistry.STATE_NOT_RUN) ?
+                        'selected_default' :
+                        (data.state == StatesRegistry.STATE_PASS) ?
+                                'selected_passed' :
+                                (data.state == StatesRegistry.STATE_FAIL) ?
+                                        'selected_failed' :
+                                        (data.state == StatesRegistry.STATE_ERROR) ?
+                                                'selected_error' : currentState;
+            }
+
+            // Default to current state.
+            return currentState;
+        }
+
+        /*
+        Lazily resizes he width of the list item based on the width of the parent list.
+         */
+        private function _onOwnerResized(event:ResizeEvent):void {
+            if (!_resizeTimer) {
+                _resizeTimer = new Timer(100, 1);
+                _resizeTimer.addEventListener(TimerEvent.TIMER_COMPLETE, _onResizeEnd);
+            }
+            if (_resizeTimer.running) {
+                _resizeTimer.stop();
+                _resizeTimer.reset();
+            }
+            _resizeTimer.start();
+        }
+
+        private function _onResizeEnd(event:TimerEvent):void {
+            itemWidth = (owner.width - 2);
+        }
+
+        private function _onPreInitialize(event:FlexEvent):void {
+            owner.addEventListener(ResizeEvent.RESIZE, _onOwnerResized);
+        }
+
+        private function _onInitialize(event:FlexEvent):void {
+            itemWidth = owner.width;
+        }
+
+        override public function set data(value:Object):void {
+            // Making sure we change item's color when "set data()" is called as a result of running
+            // the tests.
+            invalidateRendererState();
+
+            // Getting rid of the "Unable to bind to property..." warning.
+            super.data = new ObjectProxy(value);
+        }
+        ]]>
+	</fx:Script>
+
+    <s:Group id="mainContainer" x="0" y="0" width="{itemWidth}" height="100%">
+
+        <!-- Background of the item. Changes based on state. -->
+        <s:Rect id="background"
+                top="1" bottom="1" right="1" left="1">
+            <s:stroke>
+                <s:SolidColorStroke color="{data.intrinsicColor}"
+                                    weight="1"/>
+            </s:stroke>
+            <s:fill>
+                <s:SolidColor color="{data.UP_DEFAULT_BG}"
+                              color.over_default="{data.OVER_DEFAULT_BG}"
+                              color.selected_default="{data.SELECTED_DEFAULT_BG}"
+                              color.up_passed="{data.UP_PASSED_BG}"
+                              color.over_passed="{data.OVER_PASSED_BG}"
+                              color.selected_passed="{data.SELECTED_PASSED_BG}"
+                              color.up_failed="{data.UP_FAILED_BG}"
+                              color.over_failed="{data.OVER_FAILED_BG}"
+                              color.selected_failed="{data.SELECTED_FAILED_BG}"
+                              color.up_error="{data.UP_ERROR_BG}"
+                              color.over_error="{data.OVER_ERROR_BG}"
+                              color.selected_error="{data.SELECTED_ERROR_BG}"
+                />
+            </s:fill>
+        </s:Rect>
+
+        <!-- Left colored bar; works as a quick hint to the runnable type; does not change
+            color based on state. -->
+        <s:Rect id="colouredBar" top="1" left="1" bottom="1" width="5">
+            <s:fill>
+                <s:SolidColor color="{data.intrinsicColor}"/>
+            </s:fill>
+        </s:Rect>
+
+        <!-- Runnable specific icon. Color depends on the runnable typeand state.. -->
+        <icons:TestSuiteIcon id="testSuiteIcon"
+                             visible="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.up_passed="false"
+                             visible.up_failed="false"
+                             visible.up_error="false"
+                             visible.over_passed="false"
+                             visible.over_failed="false"
+                             visible.over_error="false"
+                             visible.selected_passed="false"
+                             visible.selected_failed="false"
+                             visible.selected_error="false"
+                             verticalCenter="0"
+                             x="14"/>
+
+        <icons:TestSuiteIconWhite id="testSuiteIconWhite"
+                             visible="false"
+                             visible.up_passed="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.up_failed="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.up_error="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.over_passed="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.over_failed="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.over_error="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.selected_passed="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.selected_failed="{data.intrinsicLabel == 'TEST SUITE'}"
+                             visible.selected_error="{data.intrinsicLabel == 'TEST SUITE'}"
+                             verticalCenter="0"
+                             x="14"/>
+
+        <icons:TestIcon id="testIcon"
+                        visible="{data.intrinsicLabel == 'TEST'}"
+                        visible.up_passed="false"
+                        visible.up_failed="false"
+                        visible.up_error="false"
+                        visible.over_passed="false"
+                        visible.over_failed="false"
+                        visible.over_error="false"
+                        visible.selected_passed="false"
+                        visible.selected_failed="false"
+                        visible.selected_error="false"
+                        verticalCenter="0"
+                        x="22"/>
+
+        <icons:TestIconWhite id="testIconWhite"
+                        visible="false"
+                        visible.up_passed="{data.intrinsicLabel == 'TEST'}"
+                        visible.up_failed="{data.intrinsicLabel == 'TEST'}"
+                        visible.up_error="{data.intrinsicLabel == 'TEST'}"
+                        visible.over_passed="{data.intrinsicLabel == 'TEST'}"
+                        visible.over_failed="{data.intrinsicLabel == 'TEST'}"
+                        visible.over_error="{data.intrinsicLabel == 'TEST'}"
+                        visible.selected_passed="{data.intrinsicLabel == 'TEST'}"
+                        visible.selected_failed="{data.intrinsicLabel == 'TEST'}"
+                        visible.selected_error="{data.intrinsicLabel == 'TEST'}"
+                        verticalCenter="0"
+                        x="22"/>
+
+        <icons:TestCaseIcon id="testCaseIcon"
+                            visible="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.up_passed="false"
+                            visible.up_failed="false"
+                            visible.up_error="false"
+                            visible.over_passed="false"
+                            visible.over_failed="false"
+                            visible.over_error="false"
+                            visible.selected_passed="false"
+                            visible.selected_failed="false"
+                            visible.selected_error="false"
+                            verticalCenter="0"
+                            x="22"/>
+
+        <icons:TestCaseIconWhite id="testCaseIconWhite"
+                            visible="false"
+                            visible.up_passed="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.up_failed="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.up_error="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.over_passed="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.over_failed="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.over_error="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.selected_passed="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.selected_failed="{data.intrinsicLabel == 'TEST CASE'}"
+                            visible.selected_error="{data.intrinsicLabel == 'TEST CASE'}"
+                            verticalCenter="0"
+                            x="22"/>
+
+        <!-- Toggle icon, gray variant. Only visible for default state, and only for
+                Test Suites and Tests (not for Test Cases). -->
+        <icons:ArrowIcon id="toggleIcon"
+                         rotation="{data.collapsed? 0 : 90}"
+                         visible="{data.canHaveChildren}"
+                         visible.up_passed="false"
+                         visible.up_failed="false"
+                         visible.up_error="false"
+                         visible.over_passed="false"
+                         visible.over_failed="false"
+                         visible.over_error="false"
+                         visible.selected_passed="false"
+                         visible.selected_failed="false"
+                         visible.selected_error="false"
+                         verticalCenter="0"
+                         x="{data.intrinsicGutter + (data.collapsed? 0 : 10)}"/>
+
+        <!-- Toggle icon, white variant. Only visible for non-default states, and only for
+                Test Suites and Tests (not for Test Cases). -->
+        <icons:ArrowIconWhite id="toggleIconWhite"
+                              rotation="{data.collapsed? 0 : 90}"
+                              visible="false"
+                              visible.up_passed="{data.canHaveChildren}"
+                              visible.up_failed="{data.canHaveChildren}"
+                              visible.up_error="{data.canHaveChildren}"
+                              visible.over_passed="{data.canHaveChildren}"
+                              visible.over_failed="{data.canHaveChildren}"
+                              visible.over_error="{data.canHaveChildren}"
+                              visible.selected_passed="{data.canHaveChildren}"
+                              visible.selected_failed="{data.canHaveChildren}"
+                              visible.selected_error="{data.canHaveChildren}"
+                              verticalCenter="0"
+                              x="{data.intrinsicGutter + (data.collapsed? 0 : 10)}"/>
+
+        <!-- Label describing type of the runnable -->
+        <s:Label id="runnableLabel"
+                 lineBreak="explicit"
+                 maxDisplayedLines="1"
+                 width="{itemWidth - data.intrinsicGutter - 48}"
+                 text="{data.intrinsicLabel}"
+                 fontSize="8"
+                 fontFamily="{TestLibraryFonts.NOTO_SANS_EMBEDDED}"
+                 color="{data.UP_DEFAULT_FG}"
+                 color.up_passed="{data.UP_PASSED_FG}"
+                 color.up_failed="{data.UP_FAILED_FG}"
+                 color.up_error="{data.UP_ERROR_FG}"
+                 color.over_passed="{data.OVER_PASSED_FG}"
+                 color.over_failed="{data.OVER_FAILED_FG}"
+                 color.over_error="{data.OVER_ERROR_FG}"
+                 color.selected_passed="{data.SELECTED_PASSED_FG}"
+                 color.selected_failed="{data.SELECTED_FAILED_FG}"
+                 color.selected_error="{data.SELECTED_ERROR_FG}"
+                 x="{data.intrinsicGutter + 15}"
+                 y="5"/>
+
+        <!-- Title/Name of the runnable -->
+        <s:Label id="runnableTitle"
+                 lineBreak="explicit"
+                 maxDisplayedLines="1"
+                 width="{itemWidth - data.intrinsicGutter - 48}"
+                 x="{data.intrinsicGutter + 15}"
+                 y="12"
+                 fontFamily="{TestLibraryFonts.NOTO_SANS_EMBEDDED}"
+                 fontWeight="bold"
+                 paddingTop="2"
+                 text="{data.title}"
+                 fontSize="14"
+                 color="{data.UP_DEFAULT_FG}"
+                 color.up_passed="{data.UP_PASSED_FG}"
+                 color.up_failed="{data.UP_FAILED_FG}"
+                 color.up_error="{data.UP_ERROR_FG}"
+                 color.over_passed="{data.OVER_PASSED_FG}"
+                 color.over_failed="{data.OVER_FAILED_FG}"
+                 color.over_error="{data.OVER_ERROR_FG}"
+                 color.selected_passed="{data.SELECTED_PASSED_FG}"
+                 color.selected_failed="{data.SELECTED_FAILED_FG}"
+                 color.selected_error="{data.SELECTED_ERROR_FG}" />
+
+        <!-- Description of the runnable -->
+        <s:Label id="runnableDescription"
+                 lineBreak="explicit"
+                 maxDisplayedLines="1"
+                 width="{itemWidth - data.intrinsicGutter - 48}"
+                 x="{data.intrinsicGutter + 15}"
+                 y="36"
+                 text="{data.subtitle}"
+                 fontSize="12"
+                 color="{data.UP_DEFAULT_FG}"
+                 color.up_passed="{data.UP_PASSED_FG}"
+                 color.up_failed="{data.UP_FAILED_FG}"
+                 color.up_error="{data.UP_ERROR_FG}"
+                 color.over_passed="{data.OVER_PASSED_FG}"
+                 color.over_failed="{data.OVER_FAILED_FG}"
+                 color.over_error="{data.OVER_ERROR_FG}"
+                 color.selected_passed="{data.SELECTED_PASSED_FG}"
+                 color.selected_failed="{data.SELECTED_FAILED_FG}"
+                 color.selected_error="{data.SELECTED_ERROR_FG}" />
+
+        <!-- Checkbox button for enabling/disabling the item -->
+        <s:CheckBox id="enablementButton"
+                    verticalCenter="0"
+                    x="{itemWidth - enablementButton.width - 8}"
+                    selected="@{data.enabled}"
+                    enabled="{data.checkboxEnabled}"/>
+    </s:Group>
+
+
+</s:ItemRenderer>
