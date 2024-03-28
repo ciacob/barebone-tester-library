@@ -3,7 +3,6 @@ package eu.claudius.iacob.testing.common {
 import eu.claudius.iacob.testing.interfaces.IValidationResult;
 
 import flash.events.Event;
-import flash.utils.getQualifiedClassName;
 
 /*
 Custom event to be dispatched by all ITestRunner implementors. Should contain an ITestRunnerResult implementor instance with info about an ITestCase the test runner is currently reporting. Known event types are those defined by the public static constants of the class TestRunnerEvent.

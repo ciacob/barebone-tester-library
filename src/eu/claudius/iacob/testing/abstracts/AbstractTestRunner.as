@@ -91,6 +91,7 @@ public class AbstractTestRunner implements ITestRunner {
     }
 
     public function gotoNextCase():void {
+        var result:IValidationResult;
         if (!_isAllDone()) {
             _currRunnable = _testQueue.shift();
             while (!(_currRunnable is ITestCase)) {
@@ -118,7 +119,7 @@ public class AbstractTestRunner implements ITestRunner {
 
                 // This ITestCase is enabled, and will be run.
                 // Delegate the actual testing to ITestCase implementer itself.
-                var result:IValidationResult = new ValidationResult(_currTestCase, _currTest, _currTestSuite, new Date());
+                result = new ValidationResult(_currTestCase, _currTest, _currTestSuite, new Date());
                 result.state = StatesRegistry.STATE_NOT_RUN;
                 addEventListener(TestRunnerEvent.CASE_DONE, _onCurrTestCaseDone);
                 try {
@@ -139,7 +140,7 @@ public class AbstractTestRunner implements ITestRunner {
             } else {
 
                 // This ITestCase is disabled, and will be skipped.
-                var result:IValidationResult = new ValidationResult(_currTestCase, _currTest, _currTestSuite, new Date());
+                result = new ValidationResult(_currTestCase, _currTest, _currTestSuite, new Date());
                 result.state = StatesRegistry.STATE_SKIPPED;
                 addEventListener(TestRunnerEvent.CASE_DONE, _onCurrTestCaseDone);
                 dispatchEvent(new TestRunnerEvent(TestRunnerEvent.CASE_DONE, result));

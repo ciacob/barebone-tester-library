@@ -1,7 +1,8 @@
 package eu.claudius.iacob.testing.interfaces {
 
 /*
-Implementers of this interface are intended to provide structured information about an ITestCase implementer that has just been validated, and most notably, whether that validation passed or failed.
+Implementers of this interface are intended to provide structured information about an ITestCase implementer that has
+just been validated, and most notably, whether that validation passed or failed.
  */
 public interface IValidationResult {
 
@@ -16,7 +17,8 @@ public interface IValidationResult {
     function get test():ITest;
 
     /*
-    The grand-parent ITestSuite implementer this ITestCase is a grand-child of, if applicable. Read-only, use constructor to populate.
+    The grand-parent ITestSuite implementer this ITestCase is a grand-child of, if applicable. Read-only, use
+    constructor to populate.
      */
     function get testSuite():ITestSuite;
 

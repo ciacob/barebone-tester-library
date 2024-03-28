@@ -253,14 +253,14 @@
             </s:HGroup>
 
             <!-- TIME -->
-            <s:HGroup visible="{_time}" includeInLayout="{_time}">
+            <s:HGroup visible="{!!_time}" includeInLayout="{!!_time}">
                 <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
                          styleName="{CommonStyles.HEADER_STYLE}" text="Time run:"/>
                 <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{_time}"/>
             </s:HGroup>
 
             <!-- DURATION -->
-            <s:HGroup visible="{_duration}" includeInLayout="{_duration}">
+            <s:HGroup visible="{!!_duration}" includeInLayout="{!!_duration}">
                 <s:Label minWidth="{CommonStyles.HEADER_CELL_WIDTH}"
                          styleName="{CommonStyles.HEADER_STYLE}" text="Duration:"/>
                 <s:Label styleName="{CommonStyles.MAIN_STYLE}" text="{_duration}"/>
